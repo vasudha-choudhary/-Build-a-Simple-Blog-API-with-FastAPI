@@ -1,0 +1,39 @@
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+
+app = FastAPI()
+
+# Secret key to sign JWT
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+
+# Dependency to get the current user based on the JWT token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def create_jwt_token(data: dict):
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise credentials_exception
+
+@app.post("/token")
+def login(username: str, password: str):
+    # Check username and password (validate credentials)
+    # Simulating a simple login for the sake of example
+    if username == "user" and password == "password":
+        token_data = {"sub": username}
+        return {"access_token": create_jwt_token(token_data), "token_type": "bearer"}
+
+@app.get("/users/me", response_model=dict)
+def read_users_me(current_user: dict = Depends(get_current_user)):
+    return current_user
